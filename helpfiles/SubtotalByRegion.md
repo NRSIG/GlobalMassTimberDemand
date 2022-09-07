@@ -1,0 +1,2 @@
+When ‘Subtotal By Region’ is checked, the ‘Map’ color scale range is based on the maximum regional value for the selected scenario (occurring in 2022). Otherwise, the ‘Map’ color scale is based on the maximum global value for the selected scenario. The ‘Demand Over Time’ and ‘Demand for Selected’ year charts and ‘Data’ table also report regional or global values based on the ‘Subtotal By Region’ checkbox status.
+

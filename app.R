@@ -1,6 +1,6 @@
 library("shiny")
 library('shinyjs')
-library("shinydashboard")
+library("shinyhelper")
 library("ggplot2")
 library("tidyverse")
 library("leaflet")
@@ -28,8 +28,8 @@ cn <- levels(as.factor(dataa$Country))
 
 yy <- seq(2025, 2060, 1)
 
-dataa$Height <- factor(dataa$Height, levels = c( "13 & higher", "7 to 12",  "6 & lower"  ) )
-dataa$lev1 <- factor(dataa$lev1, levels = c("Conservative Estimate", "Optimistic Estimate", "Extreme Estimate" )) 
+dataa$Height <- factor(dataa$Height, levels = c( "13 & higher", "7 to 12",  "6 & lower"))
+dataa$lev1 <- factor(dataa$lev1, levels = c("Conservative Estimate", "Optimistic Estimate", "Extreme Estimate")) 
 sc <- levels(as.factor(dataa$lev1))
 
 dat <- dataa %>% filter(!is.na(Total))
@@ -103,33 +103,57 @@ ui <- fluidPage(
       width = 3,
       
       ### sei geographic scale ----
-      selectInput('seiGeographicScale', 'Geographic Scale', choices = c('Global', 'National')),
+      helper(
+        selectInput('seiGeographicScale', 'Geographic Scale', choices = c('Global', 'National')),
+        type = 'markdown', title = 'Geographic Scale', icon = 'circle-question',
+        content = 'GeographicScale'
+      ),
       
       ### sei projection scenario ----
-      selectInput('seiScenario', 'Projection Scenario', choices = sc),
+      helper(
+        selectInput('seiScenario', 'Projection Scenario', choices = sc),
+        type = 'markdown', title = 'Projection Scenario', icon = 'circle-question',
+        content = 'Scenario'
+      ),
       
       ### sli map year ----
-      sliderInput('sliMapYear', 'Year', value = 2025, min = 2025, max = 2060, step = 1, ticks = FALSE, sep = ''),
+      helper(
+        sliderInput('sliMapYear', 'Year', value = 2025, min = 2025, max = 2060, step = 1, ticks = FALSE, sep = ''),
+        type = 'markdown', title = 'Year', icon = 'circle-question',
+        content = 'MapYear'
+      ),
       
       conditionalPanel(
         'input.seiGeographicScale == "Global"',
         
         ### cbi by region ----
-        checkboxInput('cbiByRegion', 'Subtotal by Region', value = FALSE)
+        helper(
+          checkboxInput('cbiByRegion', 'Subtotal by Region', value = FALSE),
+          type = 'markdown', title = 'Subtotal By Region', icon = 'circle-question',
+          content = 'SubtotalByRegion'
+        )
       ),
       
       conditionalPanel(
         'input.seiGeographicScale == "National"',
         
         ### sei country ----
-        selectInput('seiCountry', 'Country', choices = cn),
+        helper(
+          selectInput('seiCountry', 'Country', choices = cn),
+          type = 'markdown', title = 'Country', icon = 'circle-question',
+          content = 'Country'
+        ),
         
         ### sli chart years ----
         #sliderInput('sliProjectionYears', 'Projection Years', min = min(as.numeric(yy)), max = max(as.numeric(yy)), value = c(2040,2060), step= 1),
       ),
       
       ### sei building type ----
-      selectInput('seiVolumeCategories', 'Subtotal by Volume Category', choices = c('None', 'Building Type', 'Building Height', 'Product Type')),
+      helper(
+        selectInput('seiVolumeCategories', 'Subtotal by Volume Category', choices = c('None', 'Building Type', 'Building Height', 'Product Type')),
+        type = 'markdown', title = 'Subtotal By Volume Category', icon = 'circle-question',
+        content = 'SubtotalByVolumeCategory'
+      ),
       
       ### abi download data ----
       actionButton('abiDownloadData', 'Download Data', icon = icon('download'))
@@ -231,6 +255,9 @@ ui <- fluidPage(
 
 # Server  ------
 server <- function(input, output) {
+  # shinyhelper function 
+  observe_helpers()
+  
   # variables ----
   
   # reactive values ----
@@ -852,7 +879,11 @@ server <- function(input, output) {
       easyClose = TRUE,
       
       ### sei download data ----
-      selectInput('seiDownloadData', 'Dataset', choices = c('All', 'Filtered')),
+      helper(
+        selectInput('seiDownloadData', 'Dataset', choices = c('All', 'Filtered')),
+        type = 'markdown', title = 'Download Data', icon = 'circle-question',
+        content = 'DownloadData'
+      ),
       
       ### dbi download data ui ----
       downloadButton('dbiDownloadData', 'Download Data')

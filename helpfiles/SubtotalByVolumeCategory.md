@@ -1,0 +1,2 @@
+Projected Mass Timber volume is available by building height (‘6 & lower’ stories, ‘7 to 12’ stories, and '13 & higher' stories), building type (‘residential’ or ‘commercial’), product type (glue laminated timber - 'glt'; or cross-laminated timber - 'clt'), or without subtotals (‘None’). The ‘Subtotal By Volume Category’ selection affects the ‘Demand Over Time’ and ‘Demand for Selected Year’ charts, and the ‘Data’ table.
+
