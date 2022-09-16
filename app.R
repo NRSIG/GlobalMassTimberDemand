@@ -526,11 +526,11 @@ server <- function(input, output) {
           easyButtonState(
             stateName = 'show-legend',
             icon = icon('eye'),
-            title = 'Show Legend',
+            title = 'Legend Visible',
             onClick = JS(
             "
             function(btn, map) {
-                Shiny.onInputChange('easyButtonShowHideLegend', 'TRUE');
+                Shiny.onInputChange('easyButtonShowHideLegend', 'FALSE');
                 btn.state('hide-legend');
             }
             ")
@@ -538,11 +538,11 @@ server <- function(input, output) {
           easyButtonState(
             stateName = 'hide-legend',
             icon = icon('eye-slash'),
-            title = 'Hide Legend',
+            title = 'Legend Hidden',
             onClick = JS(
               "
             function(btn, map) {
-                Shiny.onInputChange('easyButtonShowHideLegend', 'FALSE');
+                Shiny.onInputChange('easyButtonShowHideLegend', 'TRUE');
                 btn.state('show-legend');
             }
             ")
