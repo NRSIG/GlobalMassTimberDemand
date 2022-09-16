@@ -2,6 +2,7 @@ library("shiny")
 library('shinyjs')
 library("shinyhelper")
 library("ggplot2")
+library("scales")
 library("tidyverse")
 library("leaflet")
 library("sf")
@@ -318,18 +319,18 @@ server <- function(input, output) {
     # summarize global adoption rate
     rtsG1 <- d %>%
       group_by(RegionCategory, VolumeCategory, Year) %>%
-      summarize(Rate = mean(Rate, na.rm = TRUE, weights = Total), .groups = 'drop')
+      summarize(Rate = mean(Rate, na.rm = TRUE, weights = Total) * 100, .groups = 'drop')
     
     # summarize global adoption rate
     rtsG2 <- d %>%
       group_by(RegionCategory, Year) %>%
-      summarize(Rate = mean(Rate, na.rm = TRUE, weights = Total), .groups = 'drop')
+      summarize(Rate = mean(Rate, na.rm = TRUE, weights = Total) * 100, .groups = 'drop')
     
     # summarize country adoption rate
     rtsC <- d %>%
       filter(Country == input$seiCountry) %>%
       group_by(Country, VolumeCategory, Year) %>%
-      summarize(Rate = mean(Rate, na.rm = TRUE), .groups = 'drop')
+      summarize(Rate = mean(Rate, na.rm = TRUE) * 100, .groups = 'drop')
     
     # summarize by nation
     n <- d %>%
@@ -381,6 +382,7 @@ server <- function(input, output) {
     r[2] <- r[2] + 1
     
     # update reactive values
+    rvData$legendState <- TRUE # TRUE/FALSE
     rvData$dfCountryDiffusionRates <- rtsC
     rvData$dfGlobalDiffusionRates <- rtsG2
     rvData$dfGlobalDiffusionRatesByVolCategory <- rtsG1
@@ -392,6 +394,11 @@ server <- function(input, output) {
     rvData$cGlobalRange <- r
     rvData$volumeCategoryLabel <- t
     rvData$interactiveYear <- input$sliMapYear
+  })
+  
+  ## leaflet show/hide legend easy button event ----
+  observeEvent(input$easyButtonShowHideLegend, {
+    rvData$legendState <- as.logical(input$easyButtonShowHideLegend)
   })
   
   ## leaflet mouse events ----
@@ -512,7 +519,37 @@ server <- function(input, output) {
       addProviderTiles(
         providers$Esri.WorldGrayCanvas,
         options = providerTileOptions(noWrap = FALSE)
+      ) %>%
+      addEasyButton(easyButton(
+        id = 'ebiShowHideLegend',
+        states = list(
+          easyButtonState(
+            stateName = 'show-legend',
+            icon = icon('eye'),
+            title = 'Show Legend',
+            onClick = JS(
+            "
+            function(btn, map) {
+                Shiny.onInputChange('easyButtonShowHideLegend', 'TRUE');
+                btn.state('hide-legend');
+            }
+            ")
+          ),
+          easyButtonState(
+            stateName = 'hide-legend',
+            icon = icon('eye-slash'),
+            title = 'Hide Legend',
+            onClick = JS(
+              "
+            function(btn, map) {
+                Shiny.onInputChange('easyButtonShowHideLegend', 'FALSE');
+                btn.state('show-legend');
+            }
+            ")
+          )
+        )
       )
+    )
   })
   
   ## update map
@@ -522,7 +559,7 @@ server <- function(input, output) {
     sfMap <- sfMap %>% inner_join(rvData$dfCountrySummaryOneYear, by = 'Country')
     
     if(input$seiGeographicScale == 'Global'){
-      leafletProxy('lfoMap', data = sfMap) %>%
+      m <- leafletProxy('lfoMap', data = sfMap) %>%
         clearShapes() %>%
         clearControls() %>%
         addPolygons(
@@ -537,8 +574,18 @@ server <- function(input, output) {
           ), 
           position = 'topright'
         )
+      
+      if(rvData$legendState){
+        m <- m %>%
+          addLegend(
+            position = 'bottomright', 
+            pal = palFill, opacity = 1,
+            values = seq(rvData$cGlobalRange[1], rvData$cGlobalRange[2]),
+            title = 'Cubic Meters<br>(x 1000)'
+          )
+      }
     } else {
-      leafletProxy('lfoMap', data = sfMap) %>%
+      m <- leafletProxy('lfoMap', data = sfMap) %>%
         clearShapes() %>%
         clearControls() %>%
         addPolygons(
@@ -553,6 +600,16 @@ server <- function(input, output) {
           ), 
           position = 'topright'
         )
+      
+      if(rvData$legendState){
+        m <- m %>%
+          addLegend(
+            position = 'bottomright', 
+            pal = palFill, opacity = 1,
+            values = seq(rvData$cGlobalRange[1], rvData$cGlobalRange[2]),
+            title = 'Cubic Meters<br>(x 1000)'
+          )
+      }
     }
   })
   
@@ -662,6 +719,7 @@ server <- function(input, output) {
           scale_fill_viridis_c() +
           ggtitle('Mass Timber Adoption Over Time') +
           ylab('cubic meters (x 1000)') +
+          scale_y_continuous(label = comma) +
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot', legend.position = 'none')
       } else {
@@ -672,7 +730,7 @@ server <- function(input, output) {
           geom_vline(xintercept = input$sliMapYear, col = 'red') +
           scale_fill_viridis_c() +
           scale_alpha_discrete(range = c(.5, 1)) +
-          ylim(0, rvData$cGlobalRange %>% max()) +
+          scale_y_continuous(label = comma, limits = c(0, rvData$cGlobalRange %>% max())) +
           ggtitle('Mass Timber Adoption Over Time') +
           ylab('cubic meters (x 1000)') +
           theme_bw(base_size = rvData$chartFontSize) +
@@ -693,6 +751,7 @@ server <- function(input, output) {
           #ylim(0, rvData$cGlobalRange %>% max()) +
           ggtitle('Mass Timber Adoption Over Time') +
           ylab('cubic meters (x 1000)') +
+          scale_y_continuous(label = comma) +
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot', legend.position = 'none')
       } else {
@@ -706,6 +765,7 @@ server <- function(input, output) {
           #ylim(0, rvData$cGlobalRange %>% max()) +
           ggtitle('Mass Timber Adoption Over Time') +
           ylab('cubic meters (x 1000)') +
+          scale_y_continuous(label = comma) +
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot', legend.position = 'top') +
           guides(fill = 'none', alpha = guide_legend(title=rvData$volumeCategoryLabel))
@@ -723,7 +783,7 @@ server <- function(input, output) {
           ggplot(aes(x = TotalYearRegion, y = RegionCategory, fill = TotalYearRegion)) +
           geom_col() +
           scale_fill_viridis_c(limits = rvData$cGlobalRange) +
-          xlim(0, rvData$cGlobalRange %>% max()) +
+          scale_x_continuous(label = comma, limits = c(0, rvData$cGlobalRange %>% max())) +
           ggtitle(paste('Adoption in', input$sliMapYear)) +
           xlab('cubic meters (x 1000)') +
           ylab(NULL) +
@@ -737,7 +797,7 @@ server <- function(input, output) {
           scale_fill_viridis_c(limits = rvData$cGlobalRange) +
           scale_alpha_discrete(range = c(.5, 1)) +
           theme_bw(base_size = rvData$chartFontSize) +
-          xlim(0, rvData$cGlobalRange %>% max()) +
+          scale_x_continuous(label = comma, limits = c(0, rvData$cGlobalRange %>% max())) +
           ggtitle(paste('Adoption in', input$sliMapYear)) +
           xlab('cubic meters (x 1000)') +
           ylab(NULL) +
@@ -751,7 +811,7 @@ server <- function(input, output) {
           ggplot(aes(x = TotalVolCategoryYear, y = RegionCategory, fill = PropCountry)) +
           geom_col() +
           scale_fill_viridis_c(limits = c(.1, .9)) +
-          xlim(0, rvData$dfOneCountryOneYear %>% pull(TotalCountryMax) %>% unique()) +
+          scale_x_continuous(label = comma, limits = c(0, rvData$dfOneCountryOneYear %>% pull(TotalCountryMax) %>% unique())) +
           ggtitle(paste('Adoption in', input$sliMapYear)) +
           xlab('cubic meters (x 1000)') +
           ylab(NULL) +
@@ -766,7 +826,7 @@ server <- function(input, output) {
           scale_fill_viridis_c(limits = c(.1, .9)) +
           scale_alpha_discrete(range = c(.5, 1)) +
           theme_bw(base_size = rvData$chartFontSize) +
-          xlim(0, rvData$dfOneCountryOneYear %>% pull(TotalCountryMax) %>% unique()) +
+          scale_x_continuous(label = comma, limits = c(0, rvData$dfOneCountryOneYear %>% pull(TotalCountryMax) %>% unique())) +
           ggtitle(paste('Adoption in', input$sliMapYear)) +
           xlab('cubic meters (x 1000)') +
           ylab(NULL) +
@@ -808,6 +868,7 @@ server <- function(input, output) {
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot', legend.position = 'top') +
           ggtitle('Adoption Rate') +
+          ylab('Rate (%)') +
           guides(color = guide_legend(title=NULL, nrow = 1))
       } else {
         rvData$dfGlobalDiffusionRates %>%
@@ -816,6 +877,7 @@ server <- function(input, output) {
           geom_vline(xintercept = input$sliMapYear, col = 'red') +
           scale_color_viridis_d() +
           ggtitle('Adoption Rate') +
+          ylab('Rate (%)') +
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot') +
           guides(color = 'none')
@@ -828,6 +890,7 @@ server <- function(input, output) {
           geom_vline(xintercept = input$sliMapYear, col = 'red') +
           scale_color_viridis_d() +
           ggtitle('Adoption Rate') +
+          ylab('Rate (%)') +
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot') +
           guides(color = 'none')
@@ -838,6 +901,7 @@ server <- function(input, output) {
           geom_vline(xintercept = input$sliMapYear, col = 'red') +
           scale_color_viridis_d() +
           ggtitle('Adoption Rate') +
+          ylab('Rate (%)') +
           theme_bw(base_size = rvData$chartFontSize) +
           theme(plot.title.position = 'plot', legend.position = 'top') +
           guides(color = guide_legend(title = NULL, nrow = 1))
