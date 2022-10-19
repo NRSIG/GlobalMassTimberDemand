@@ -6,7 +6,6 @@ library("scales")
 library("tidyverse")
 library("leaflet")
 library("sf")
-library("ggpattern")
 
 # App startup steps ----
 
